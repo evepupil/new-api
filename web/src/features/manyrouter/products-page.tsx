@@ -43,6 +43,7 @@ import {
 } from '@/features/pricing/lib/price'
 import { cn } from '@/lib/utils'
 
+import { formatProductTime } from './lib/product-time'
 import type { ManyRouterProduct } from './types'
 import { useManyRouterProducts } from './use-products'
 
@@ -76,8 +77,9 @@ export function ManyRouterProductsPage() {
           {products.data && (
             <p className='text-muted-foreground mt-1 text-sm'>
               {products.data.site_name} · {t('Updated')}{' '}
-              {new Date(products.data.generated_at).toLocaleString(
-                i18n.language
+              {formatProductTime(
+                products.data.generated_at,
+                i18n.resolvedLanguage || i18n.language
               )}
             </p>
           )}
@@ -209,8 +211,9 @@ export function ManyRouterProductsPage() {
                   </TableCell>
                   <TableCell>
                     {product.facts_through
-                      ? new Date(product.facts_through).toLocaleString(
-                          i18n.language
+                      ? formatProductTime(
+                          product.facts_through,
+                          i18n.resolvedLanguage || i18n.language
                         )
                       : t('No data')}
                   </TableCell>
