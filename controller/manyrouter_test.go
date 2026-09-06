@@ -185,6 +185,7 @@ func TestManyRouterManagedSyncContract(t *testing.T) {
 		Data    dto.ManyRouterSyncLogPage `json:"data"`
 	}
 	require.NoError(t, common.Unmarshal(logsResponse.Body.Bytes(), &logsEnvelope))
+	assert.Equal(t, int64(1), logsEnvelope.Data.Total)
 	var scopedLog *dto.ManyRouterSyncLog
 	for index := range logsEnvelope.Data.Items {
 		if logsEnvelope.Data.Items[index].ID == 91 {

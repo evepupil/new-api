@@ -462,11 +462,22 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 }
 
 func GetAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string) (logs []*Log, total int64, err error) {
+	return getAllLogs(logType, startTimestamp, endTimestamp, modelName, username, tokenName, startIdx, num, channel, group, requestId, upstreamRequestId, false)
+}
+
+func GetManyRouterLogs(logType int, startTimestamp int64, endTimestamp int64, startIdx int, num int) (logs []*Log, total int64, err error) {
+	return getAllLogs(logType, startTimestamp, endTimestamp, "", "", "", startIdx, num, 0, "", "", "", true)
+}
+
+func getAllLogs(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, startIdx int, num int, channel int, group string, requestId string, upstreamRequestId string, excludeChannelTests bool) (logs []*Log, total int64, err error) {
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB
 	} else {
 		tx = LOG_DB.Where("logs.type = ?", logType)
+	}
+	if excludeChannelTests {
+		tx = tx.Where("COALESCE(logs.token_name, '') <> ?", "模型测试")
 	}
 
 	if tx, err = applyExplicitLogTextFilter(tx, "logs.model_name", modelName); err != nil {

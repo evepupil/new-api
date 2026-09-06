@@ -49,9 +49,7 @@ func GetManyRouterSyncLogs(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": "ManyRouter log time range is invalid"})
 		return
 	}
-	logs, total, err := model.GetAllLogs(
-		logType, start, end, "", "", "", page.GetStartIdx(), page.GetPageSize(), 0, "", "", "",
-	)
+	logs, total, err := model.GetManyRouterLogs(logType, start, end, page.GetStartIdx(), page.GetPageSize())
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "message": "ManyRouter logs are unavailable"})
 		return
