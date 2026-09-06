@@ -165,7 +165,7 @@ export function ManyRouterProductsPage() {
             <TableBody>
               {visible.map((product) => (
                 <TableRow key={`${product.model}:${product.group_key}`}>
-                  <TableCell className='max-w-64 font-medium break-all whitespace-normal'>
+                  <TableCell className='max-w-64 min-w-32 font-medium break-words whitespace-normal'>
                     {product.model}
                   </TableCell>
                   <TableCell>
