@@ -34,6 +34,13 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/pricing", middleware.HeaderNavModuleAuth("pricing"), controller.GetPricing)
 		apiRouter.GET("/manyrouter/products", middleware.UserAuth(), controller.GetManyRouterProducts)
+		manyRouterSyncRoute := apiRouter.Group("/manyrouter/sync")
+		manyRouterSyncRoute.Use(middleware.ManyRouterSyncAuth())
+		{
+			manyRouterSyncRoute.GET("/capabilities", controller.GetManyRouterSyncCapabilities)
+			manyRouterSyncRoute.GET("/state", controller.GetManyRouterManagedState)
+			manyRouterSyncRoute.PUT("/state", controller.ApplyManyRouterManagedState)
+		}
 		perfMetricsRoute := apiRouter.Group("/perf-metrics")
 		perfMetricsRoute.Use(middleware.HeaderNavModulePublicOrUserAuth("pricing"))
 		{
