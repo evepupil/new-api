@@ -71,6 +71,7 @@ func SyncCapabilities() (dto.ManyRouterSyncCapabilities, error) {
 			EntryVisibility:       true,
 			PersistentIdempotency: true,
 			FinalStateDigest:      true,
+			LogRead:               true,
 		},
 		Limits: dto.ManyRouterSyncLimits{
 			MaxChannels:      SyncMaxChannels,

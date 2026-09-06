@@ -80,6 +80,7 @@ func TestManyRouterManagedSyncContract(t *testing.T) {
 	assert.Equal(t, manyrouterservice.SyncContractVersion, capabilities.Data.ContractVersion)
 	assert.Equal(t, "sqlite", capabilities.Data.DatabaseType)
 	assert.True(t, capabilities.Data.Features.AtomicApply)
+	assert.True(t, capabilities.Data.Features.LogRead)
 
 	stateResponse := performManyRouterSyncRequest(t, router, http.MethodGet, "/api/manyrouter/sync/state", currentToken, nil)
 	require.Equal(t, http.StatusOK, stateResponse.Code)
@@ -168,6 +169,31 @@ func TestManyRouterManagedSyncContract(t *testing.T) {
 	unknownField := []byte(`{"contract_version":"m4-managed-sync-v1","unexpected":true}`)
 	strictResponse := performManyRouterSyncRequest(t, router, http.MethodPut, "/api/manyrouter/sync/state", currentToken, unknownField)
 	assert.Equal(t, http.StatusBadRequest, strictResponse.Code)
+
+	require.NoError(t, model.LOG_DB.Create(&model.Log{
+		Id: 91, UserId: 9, CreatedAt: time.Now().Unix(), Type: model.LogTypeConsume,
+		Username: "private-user", TokenName: "private-token", ModelName: "gpt-3.5-turbo",
+		PromptTokens: 11, CompletionTokens: 7, UseTime: 2, ChannelId: 41, Group: "mrab",
+		RequestId: "request-91", Other: `{"frt":125}`,
+	}).Error)
+	logsResponse := performManyRouterSyncRequest(t, router, http.MethodGet, "/api/manyrouter/sync/logs?type=2&p=1&page_size=100", currentToken, nil)
+	require.Equal(t, http.StatusOK, logsResponse.Code, logsResponse.Body.String())
+	assert.NotContains(t, logsResponse.Body.String(), "private-user")
+	assert.NotContains(t, logsResponse.Body.String(), "private-token")
+	var logsEnvelope struct {
+		Success bool                      `json:"success"`
+		Data    dto.ManyRouterSyncLogPage `json:"data"`
+	}
+	require.NoError(t, common.Unmarshal(logsResponse.Body.Bytes(), &logsEnvelope))
+	var scopedLog *dto.ManyRouterSyncLog
+	for index := range logsEnvelope.Data.Items {
+		if logsEnvelope.Data.Items[index].ID == 91 {
+			scopedLog = &logsEnvelope.Data.Items[index]
+			break
+		}
+	}
+	require.NotNil(t, scopedLog)
+	assert.Equal(t, int64(11), scopedLog.InputTokens)
 }
 
 func TestManyRouterManagedSyncDatabaseMatrix(t *testing.T) {
@@ -346,6 +372,7 @@ func setupManyRouterSyncTest(t *testing.T) (*gin.Engine, string, *atomic.Int64) 
 	group.Use(middleware.ManyRouterSyncAuth())
 	group.GET("/capabilities", GetManyRouterSyncCapabilities)
 	group.GET("/state", GetManyRouterManagedState)
+	group.GET("/logs", GetManyRouterSyncLogs)
 	group.PUT("/state", ApplyManyRouterManagedState)
 	return engine, upstream.URL, upstreamRequests
 }

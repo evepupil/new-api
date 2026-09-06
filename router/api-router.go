@@ -39,6 +39,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			manyRouterSyncRoute.GET("/capabilities", controller.GetManyRouterSyncCapabilities)
 			manyRouterSyncRoute.GET("/state", controller.GetManyRouterManagedState)
+			manyRouterSyncRoute.GET("/logs", controller.GetManyRouterSyncLogs)
 			manyRouterSyncRoute.PUT("/state", controller.ApplyManyRouterManagedState)
 		}
 		perfMetricsRoute := apiRouter.Group("/perf-metrics")

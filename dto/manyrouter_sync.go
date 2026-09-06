@@ -40,6 +40,7 @@ type ManyRouterSyncFeatures struct {
 	EntryVisibility       bool `json:"entry_visibility"`
 	PersistentIdempotency bool `json:"persistent_idempotency"`
 	FinalStateDigest      bool `json:"final_state_digest"`
+	LogRead               bool `json:"log_read"`
 }
 
 type ManyRouterSyncLimits struct {
@@ -126,4 +127,28 @@ type ManyRouterApplyResponse struct {
 	Replayed         bool                   `json:"replayed"`
 	Actions          []ManyRouterSyncAction `json:"actions"`
 	State            ManyRouterManagedState `json:"state"`
+}
+
+type ManyRouterSyncLog struct {
+	ID                int64  `json:"id"`
+	CreatedAt         int64  `json:"created_at"`
+	Type              int    `json:"type"`
+	Content           string `json:"content"`
+	Model             string `json:"model_name"`
+	InputTokens       int64  `json:"prompt_tokens"`
+	OutputTokens      int64  `json:"completion_tokens"`
+	DurationSeconds   int64  `json:"use_time"`
+	Stream            bool   `json:"is_stream"`
+	ChannelID         int64  `json:"channel"`
+	Group             string `json:"group"`
+	RequestID         string `json:"request_id,omitempty"`
+	UpstreamRequestID string `json:"upstream_request_id,omitempty"`
+	Other             string `json:"other"`
+}
+
+type ManyRouterSyncLogPage struct {
+	Items    []ManyRouterSyncLog `json:"items"`
+	Total    int64               `json:"total"`
+	Page     int                 `json:"page"`
+	PageSize int                 `json:"page_size"`
 }
