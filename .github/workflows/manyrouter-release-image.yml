@@ -25,22 +25,26 @@ jobs:
       source_sha: ${{ steps.release.outputs.source_sha }}
       short_sha: ${{ steps.release.outputs.short_sha }}
     steps:
-      - name: Check out tested source
+      - name: Check out source history
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 1
-          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
 
       - name: Validate release identity
         id: release
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          SOURCE_REF: ${{ inputs.source_ref }}
         run: |
           if ! printf '%s' "$RELEASE_VERSION" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,116}$'; then
             echo "::error::Version cannot be used as an immutable container tag"
             exit 1
           fi
-          SOURCE_SHA=$(git rev-parse HEAD)
+          if ! printf '%s' "$SOURCE_REF" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$'; then
+            echo "::error::Source ref has an invalid format"
+            exit 1
+          fi
+          SOURCE_SHA=$(git rev-parse --verify --end-of-options "${SOURCE_REF}^{commit}")
           echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SOURCE_SHA::8}" >> "$GITHUB_OUTPUT"
