@@ -20,7 +20,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, KeyRound, Settings2, WalletCards } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useForm, type SubmitErrorHandler } from 'react-hook-form'
+import { useForm, useWatch, type SubmitErrorHandler } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -103,7 +103,7 @@ export function ApiKeysMutateDrawer({
   const { t } = useTranslation()
   const isUpdate = !!currentRow
   const currentRowId = currentRow?.id
-  const { triggerRefresh } = useApiKeys()
+  const { triggerRefresh, initialGroup } = useApiKeys()
   const { status, loading: statusLoading } = useStatus()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -200,10 +200,7 @@ export function ApiKeysMutateDrawer({
 
   // Load existing data when updating
   useEffect(() => {
-    if (!open) {
-      setInitializedTarget(null)
-      return
-    }
+    if (!open) return
     if (
       !groupsFetched ||
       groupsFetching ||
@@ -215,7 +212,10 @@ export function ApiKeysMutateDrawer({
     if (isUpdate && (!apiKeyFetched || apiKeyFetching)) return
     if (!isUpdate && statusLoading) return
 
-    const target = isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
+    const target =
+      isUpdate && currentRow
+        ? `update:${currentRow.id}`
+        : `create:${initialGroup ?? ''}`
     if (initializedTarget === target) return
     if (isUpdate && currentRow) {
       if (apiKeyData?.success && apiKeyData.data) {
@@ -226,12 +226,25 @@ export function ApiKeysMutateDrawer({
             maxAutoGroups
           )
         )
+        // Async API key data must populate the form before submission unlocks.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInitializedTarget(target)
       }
     } else {
-      form.reset(
-        getApiKeyFormDefaultValues(defaultUseAutoGroup && backendHasAuto)
+      const defaults = getApiKeyFormDefaultValues(
+        defaultUseAutoGroup && backendHasAuto
       )
+      if (
+        initialGroup &&
+        groups.some((group) => group.value === initialGroup)
+      ) {
+        defaults.group = initialGroup
+        defaults.auto_groups_mode = 'inherit'
+        defaults.auto_groups = []
+      }
+      form.reset(defaults)
+      // Async group data must populate the form before submission unlocks.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInitializedTarget(target)
     }
   }, [
@@ -252,12 +265,24 @@ export function ApiKeysMutateDrawer({
     availableAutoGroupNames,
     maxAutoGroups,
     initializedTarget,
+    initialGroup,
+    groups,
   ])
 
   const formTarget =
-    isUpdate && currentRow ? `update:${currentRow.id}` : 'create'
+    isUpdate && currentRow
+      ? `update:${currentRow.id}`
+      : `create:${initialGroup ?? ''}`
   const isFormInitialized = initializedTarget === formTarget
-  const selectedGroup = form.watch('group')
+  const selectedGroup = useWatch({ control: form.control, name: 'group' })
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      form.reset()
+      setInitializedTarget(null)
+    }
+    onOpenChange(nextOpen)
+  }
 
   // Correct group after groups load: if the form value is not in available groups, fall back
   useEffect(() => {
@@ -289,7 +314,7 @@ export function ApiKeysMutateDrawer({
         })
         if (result.success) {
           toast.success(t(SUCCESS_MESSAGES.API_KEY_UPDATED))
-          onOpenChange(false)
+          handleOpenChange(false)
           triggerRefresh()
         } else {
           toast.error(result.message || t(ERROR_MESSAGES.UPDATE_FAILED))
@@ -305,7 +330,7 @@ export function ApiKeysMutateDrawer({
             name:
               i === 0 && data.name
                 ? data.name
-                : `${data.name || 'default'}-${Math.random().toString(36).slice(2, 8)}`,
+                : `${data.name || 'default'}-${i + 1}`,
           })
           if (result.success) {
             successCount++
@@ -321,7 +346,7 @@ export function ApiKeysMutateDrawer({
               count: successCount,
             })
           )
-          onOpenChange(false)
+          handleOpenChange(false)
           triggerRefresh()
         }
       }
@@ -357,19 +382,13 @@ export function ApiKeysMutateDrawer({
   const quotaPlaceholder = tokensOnly
     ? t('Enter quota in tokens')
     : t('Enter quota in {{currency}}', { currency: currencyLabel })
-  const autoGroupsMode = form.watch('auto_groups_mode')
-  const unlimitedQuota = form.watch('unlimited_quota')
+  const [autoGroupsMode, unlimitedQuota] = useWatch({
+    control: form.control,
+    name: ['auto_groups_mode', 'unlimited_quota'],
+  })
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(v) => {
-        onOpenChange(v)
-        if (!v) {
-          form.reset()
-        }
-      }}
-    >
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         className={sideDrawerContentClassName('max-w-none sm:!max-w-[620px]')}
       >

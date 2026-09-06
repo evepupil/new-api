@@ -84,7 +84,7 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
   }
 }
 
-async function renderCreateDrawer(): Promise<void> {
+async function renderCreateDrawer(initialGroup?: string): Promise<void> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -124,7 +124,7 @@ async function renderCreateDrawer(): Promise<void> {
   render(
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
-        <ApiKeysProvider>
+        <ApiKeysProvider initialGroup={initialGroup}>
           <ApiKeysMutateDrawer open onOpenChange={() => undefined} />
         </ApiKeysProvider>
       </I18nextProvider>
@@ -204,6 +204,24 @@ afterEach(() => {
 })
 
 describe('API keys mutate drawer Auto group integration', () => {
+  test('uses the product group when the create flow starts from Models & Auto', async () => {
+    const createdPayloads: Array<Record<string, unknown>> = []
+    installApiFixtures(createdPayloads)
+    await renderCreateDrawer('vip')
+
+    const groupTrigger = getControlByLabel('Group')
+    expect(groupTrigger.textContent).toContain('vip')
+    expect(document.body.textContent).not.toContain('Auto group order')
+
+    changeInput(getControlByLabel('Name'), 'product-key')
+    fireEvent.click(findButton('Save changes', true))
+    await waitFor(() => expect(createdPayloads).toHaveLength(1))
+
+    expect(createdPayloads[0]?.group).toBe('vip')
+    expect(createdPayloads[0]?.auto_groups).toEqual([])
+    expect(createdPayloads[0]?.cross_group_retry).toBe(false)
+  })
+
   test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)

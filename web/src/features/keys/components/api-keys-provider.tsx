@@ -24,7 +24,7 @@ import useDialogState from '@/hooks/use-dialog'
 
 import { fetchTokenKey, fetchTokenKeysBatch } from '../api'
 import { ERROR_MESSAGES } from '../constants'
-import { type ApiKey, type ApiKeysDialogType } from '../types'
+import type { ApiKey, ApiKeysDialogType } from '../types'
 
 type ApiKeysContextType = {
   open: ApiKeysDialogType | null
@@ -41,11 +41,20 @@ type ApiKeysContextType = {
   loadingKeys: Record<number, boolean>
   copiedKeyId: number | null
   markKeyCopied: (id: number) => void
+  initialGroup?: string
 }
 
 const ApiKeysContext = React.createContext<ApiKeysContextType | null>(null)
 
-export function ApiKeysProvider({ children }: { children: React.ReactNode }) {
+export function ApiKeysProvider({
+  children,
+  initialGroup,
+  openCreate,
+}: {
+  children: React.ReactNode
+  initialGroup?: string
+  openCreate?: boolean
+}) {
   const { t } = useTranslation()
   const [open, setOpen] = useDialogState<ApiKeysDialogType>(null)
   const [currentRow, setCurrentRow] = useState<ApiKey | null>(null)
@@ -58,10 +67,17 @@ export function ApiKeysProvider({ children }: { children: React.ReactNode }) {
 
   const [copiedKeyId, setCopiedKeyId] = useState<number | null>(null)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const initialCreateHandled = useRef(false)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
+
+  useEffect(() => {
+    if (!openCreate || initialCreateHandled.current) return
+    initialCreateHandled.current = true
+    setOpen('create')
+  }, [openCreate, setOpen])
 
   const markKeyCopied = useCallback((id: number) => {
     setCopiedKeyId(id)
@@ -171,6 +187,7 @@ export function ApiKeysProvider({ children }: { children: React.ReactNode }) {
         loadingKeys,
         copiedKeyId,
         markKeyCopied,
+        initialGroup,
       }}
     >
       {children}

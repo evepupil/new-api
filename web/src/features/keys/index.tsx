@@ -25,10 +25,16 @@ import { ApiKeysPrimaryButtons } from './components/api-keys-primary-buttons'
 import { ApiKeysProvider } from './components/api-keys-provider'
 import { ApiKeysTable } from './components/api-keys-table'
 
-export function ApiKeys() {
+export function ApiKeys({
+  initialGroup,
+  openCreate,
+}: {
+  initialGroup?: string
+  openCreate?: boolean
+}) {
   const { t } = useTranslation()
   return (
-    <ApiKeysProvider>
+    <ApiKeysProvider initialGroup={initialGroup} openCreate={openCreate}>
       <SectionPageLayout fixedContent>
         <SectionPageLayout.Title>{t('API Keys')}</SectionPageLayout.Title>
         <SectionPageLayout.Actions>
