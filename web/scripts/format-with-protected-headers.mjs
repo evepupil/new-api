@@ -30,6 +30,7 @@ if (mode !== '--check' && mode !== '--write') {
 }
 
 const root = process.cwd()
+const formatter = join(root, 'node_modules', 'oxfmt', 'bin', 'oxfmt')
 const excludedDirs = new Set([
   '.git',
   '.tanstack',
@@ -141,13 +142,24 @@ let exitCode = 0
 try {
   headers = stripProtectedHeaders(files)
   const result = spawnSync(
-    'oxfmt',
-    ['-c', '.oxfmtrc.json', '--ignore-path', '.gitignore', '--write', '.'],
+    process.execPath,
+    [
+      formatter,
+      '-c',
+      '.oxfmtrc.json',
+      '--ignore-path',
+      '.gitignore',
+      '--write',
+      '.',
+    ],
     {
       cwd: root,
       stdio: 'inherit',
     }
   )
+  if (result.error) {
+    console.error(result.error.message)
+  }
   exitCode = result.status ?? 1
   restoreProtectedHeaders(headers)
 
