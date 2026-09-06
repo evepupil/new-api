@@ -7,6 +7,10 @@ on:
         description: Immutable ManyRouter combination version
         required: true
         type: string
+      source_ref:
+        description: Tested New API commit or tag to package
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,8 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.release.outputs.version }}
+      source_sha: ${{ steps.release.outputs.source_sha }}
       short_sha: ${{ steps.release.outputs.short_sha }}
     steps:
+      - name: Check out tested source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          ref: ${{ inputs.source_ref }}
+
       - name: Validate release identity
         id: release
         env:
@@ -29,8 +40,10 @@ jobs:
             echo "::error::Version cannot be used as an immutable container tag"
             exit 1
           fi
+          SOURCE_SHA=$(git rev-parse HEAD)
           echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SOURCE_SHA::8}" >> "$GITHUB_OUTPUT"
 
   build:
     needs: prepare
@@ -48,6 +61,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
 
       - name: Set application build version
         env:
@@ -73,10 +88,10 @@ jobs:
           build-args: GO_PROXY=https://proxy.golang.org,direct
           tags: |
             ghcr.io/evepupil/new-api:manyrouter-${{ needs.prepare.outputs.version }}-${{ matrix.arch }}
-            ghcr.io/evepupil/new-api:sha-${{ github.sha }}-${{ matrix.arch }}
+            ghcr.io/evepupil/new-api:sha-${{ needs.prepare.outputs.source_sha }}-${{ matrix.arch }}
           labels: |
             org.opencontainers.image.source=https://github.com/evepupil/new-api
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ needs.prepare.outputs.source_sha }}
             org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
           provenance: mode=max
           sbom: true
@@ -103,7 +118,7 @@ jobs:
         run: |
           docker buildx imagetools create \
             -t "ghcr.io/evepupil/new-api:manyrouter-${RELEASE_VERSION}" \
-            -t "ghcr.io/evepupil/new-api:sha-${GITHUB_SHA}" \
+            -t "ghcr.io/evepupil/new-api:sha-${{ needs.prepare.outputs.source_sha }}" \
             "ghcr.io/evepupil/new-api:manyrouter-${RELEASE_VERSION}-amd64" \
             "ghcr.io/evepupil/new-api:manyrouter-${RELEASE_VERSION}-arm64"
 
