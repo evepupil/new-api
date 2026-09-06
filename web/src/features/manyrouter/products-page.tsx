@@ -142,7 +142,12 @@ export function ManyRouterProductsPage() {
         </div>
       )}
       {ready && (
-        <div className='border-border overflow-hidden rounded-lg border'>
+        <div
+          className='border-border overflow-x-auto rounded-lg border'
+          role='region'
+          aria-label={t('Models & Auto')}
+          tabIndex={0}
+        >
           <Table className='min-w-[1040px]'>
             <TableHeader>
               <TableRow>
